@@ -6,15 +6,15 @@ from core.modules import Encoder, Decoder, Postnet
 
 
 class Tacotron2(nn.Module):
-    def __init__(self, hparams):
+    def __init__(self, hparams, n_symbols):
         super(Tacotron2, self).__init__()
         self.mask_padding = hparams.mask_padding
         self.fp16_run = hparams.fp16_run
         self.n_mel_channels = hparams.n_mel_channels
         self.n_frames_per_step = hparams.n_frames_per_step
         self.embedding = nn.Embedding(
-            hparams.n_symbols, hparams.symbols_embedding_dim)
-        std = sqrt(2.0 / (hparams.n_symbols + hparams.symbols_embedding_dim))
+            n_symbols, hparams.symbols_embedding_dim)
+        std = sqrt(2.0 / (n_symbols + hparams.symbols_embedding_dim))
         val = sqrt(3.0) * std  # uniform bounds for std
         self.embedding.weight.data.uniform_(-val, val)
         self.encoder = Encoder(hparams)
