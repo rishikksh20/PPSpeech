@@ -20,22 +20,30 @@ class Tacotron2(nn.Module):
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
-        if hparams.with_gst:
-            self.gst = GST(hparams)
+        self.prefix_embed = GST(hparams)
+        self.postfix_embed = GST(hparams)
+        self.acoustic_embed = GST(hparams)
 
     def parse_batch(self, batch):
-        text_padded, input_lengths, mel_padded, gate_padded, \
-            output_lengths = batch
-        text_padded = to_gpu(text_padded).long()
+        current_text_padded, input_lengths, pre_text_padded, pre_text_len, post_text_padded, post_text_len, \
+        mel_padded, gate_padded, output_lengths = batch
+
+        current_text_padded = to_gpu(current_text_padded).long()
         input_lengths = to_gpu(input_lengths).long()
+
+        pre_text_padded = to_gpu(pre_text_padded).long()
+        pre_text_len = to_gpu(pre_text_len).long()
+
+        post_text_padded = to_gpu(post_text_padded).long()
+        post_text_len = to_gpu(post_text_len).long()
+
         max_len = torch.max(input_lengths.data).item()
         mel_padded = to_gpu(mel_padded).float()
         gate_padded = to_gpu(gate_padded).float()
         output_lengths = to_gpu(output_lengths).long()
 
-        return (
-            (text_padded, input_lengths, mel_padded, max_len, output_lengths),
-            (mel_padded, gate_padded))
+        return ((current_text_padded, input_lengths, pre_text_padded, pre_text_len, post_text_padded, post_text_len, \
+             mel_padded, max_len, output_lengths), (mel_padded, gate_padded))
 
     def parse_output(self, outputs, output_lengths=None):
         if self.mask_padding and output_lengths is not None:
@@ -50,22 +58,35 @@ class Tacotron2(nn.Module):
         return outputs
 
     def forward(self, inputs):
-        text_inputs, text_lengths, mels, max_len, output_lengths = inputs
-        text_lengths, output_lengths = text_lengths.data, output_lengths.data
+        current_text, input_lengths, pre_text, pre_text_len, post_text, post_text_len , mels, max_len, \
+        output_lengths = inputs
+        input_lengths, pre_text_len, post_text_len, output_lengths = \
+            input_lengths.data, pre_text_len.data, post_text_len.data, output_lengths.data
 
-        embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
+        embedded_inputs = self.embedding(current_text).transpose(1, 2)
+        encoder_outputs = self.encoder(embedded_inputs, input_lengths)
 
-        encoder_outputs = self.encoder(embedded_inputs, text_lengths)
+        # Context embedding
+        pre_embedded_inputs = self.embedding(pre_text).transpose(1, 2)
+        post_embedded_inputs = self.embedding(post_text).transpose(1, 2)
 
-        if hasattr(self, 'gst'):
-            embedded_gst = self.gst(mels, output_lengths)
-            embedded_gst = embedded_gst.repeat(1, encoder_outputs.size(1), 1)
+        pre_embed = self.encoder(pre_embedded_inputs, pre_text_len)
+        post_embed = self.encoder(post_embedded_inputs, post_text_len)
 
-            encoder_outputs = torch.cat(
-                (encoder_outputs, embedded_gst), dim=2)
+        pre_context_embed = self.prefix_embed(pre_embed, pre_text_len)
+        post_context_embed = self.postfix_embed(post_embed, post_text_len)
+        context_embed = torch.cat((pre_context_embed, post_context_embed), dim=2)
+        context_embed = context_embed.repeat(1, encoder_outputs.size(1), 1)
+
+        acoustic_embed = self.acoustic_embed(mels, output_lengths)
+        acoustic_embed = acoustic_embed.repeat(1, encoder_outputs.size(1), 1)
+
+        # Context concat to encoder output
+        encoder_outputs = torch.cat(
+                (encoder_outputs, acoustic_embed, context_embed), dim=2)
 
         mel_outputs, gate_outputs, alignments = self.decoder(
-            encoder_outputs, mels, memory_lengths=text_lengths)
+            encoder_outputs, mels, memory_lengths=input_lengths)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -74,23 +95,27 @@ class Tacotron2(nn.Module):
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
             output_lengths)
 
-    def inference(self, input, style_input = None):
+    def inference(self, input, prefix, postfix, style_input = None):
 
         embedded_inputs = self.embedding(input).transpose(1, 2)
+        pre_embedded_inputs = self.embedding(prefix).transpose(1, 2)
+        post_embedded_inputs = self.embedding(postfix).transpose(1, 2)
+
+
         encoder_outputs = self.encoder.inference(embedded_inputs)
+        pre_embed = self.encoder.inference(pre_embedded_inputs)
+        post_embed = self.encoder.inference(post_embedded_inputs)
 
-        if hasattr(self, 'gst'):
-            if isinstance(style_input, int):
-                query = torch.zeros(1, 1, self.gst.encoder.ref_enc_gru_size).cuda()
-                GST = torch.tanh(self.gst.stl.embed)
-                key = GST[style_input].unsqueeze(0).expand(1, -1, -1)
-                embedded_gst = self.gst.stl.attention(query, key)
-            else:
-                embedded_gst = self.gst(style_input)
+        pre_context_embed = self.prefix_embed(pre_embed)
+        post_context_embed = self.postfix_embed(post_embed)
+        context_embed = torch.cat((pre_context_embed, post_context_embed), dim=2)
+        context_embed = context_embed.repeat(1, encoder_outputs.size(1), 1)
 
-            embedded_gst = embedded_gst.repeat(1, encoder_outputs.size(1), 1)
-            encoder_outputs = torch.cat(
-                (encoder_outputs, embedded_gst), dim=2)
+        acoustic_embed = self.acoustic_embed(style_input)
+
+        acoustic_embed = acoustic_embed.repeat(1, encoder_outputs.size(1), 1)
+        encoder_outputs = torch.cat(
+                (encoder_outputs, acoustic_embed, context_embed), dim=2)
 
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
             encoder_outputs)
