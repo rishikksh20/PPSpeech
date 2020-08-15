@@ -4,7 +4,7 @@ import torch
 import torch.utils.data
 
 from core import layers
-from utils import load_wav_to_torch, load_filepaths_and_text
+from utils.utils import load_wav_to_torch, load_filepaths_and_text
 from dataset.text import text_to_sequence
 
 
@@ -46,7 +46,7 @@ class TextMelLoader(torch.utils.data.Dataset):
             melspec = self.stft.mel_spectrogram(audio_norm)
             melspec = torch.squeeze(melspec, 0)
         else:
-            melspec = torch.from_numpy(np.load(filename))
+            melspec = torch.from_numpy(np.load(filename.replace(".wav", ".npy")))
             assert melspec.size(0) == self.stft.n_mel_channels, (
                 'Mel dimension mismatch: given {}, expected {}'.format(
                     melspec.size(0), self.stft.n_mel_channels))

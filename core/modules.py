@@ -3,7 +3,7 @@ from torch.autograd import Variable
 from torch import nn
 from torch.nn import functional as F
 from core.layers import ConvNorm, LinearNorm
-from utils import get_mask_from_lengths
+from utils.utils import get_mask_from_lengths
 
 class LocationLayer(nn.Module):
     def __init__(self, attention_n_filters, attention_kernel_size,

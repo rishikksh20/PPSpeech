@@ -1,15 +1,15 @@
 from math import sqrt
 import torch
 from torch import nn
-from utils import to_gpu, get_mask_from_lengths
+from utils.utils import to_gpu, get_mask_from_lengths
 from core.modules import Encoder, Decoder, Postnet
+from core.gst import GST
 
 
 class Tacotron2(nn.Module):
     def __init__(self, hparams, n_symbols):
         super(Tacotron2, self).__init__()
         self.mask_padding = hparams.mask_padding
-        self.fp16_run = hparams.fp16_run
         self.n_mel_channels = hparams.n_mel_channels
         self.n_frames_per_step = hparams.n_frames_per_step
         self.embedding = nn.Embedding(
@@ -20,6 +20,8 @@ class Tacotron2(nn.Module):
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
+        if hparams.with_gst:
+            self.gst = GST(hparams)
 
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, \
@@ -55,6 +57,13 @@ class Tacotron2(nn.Module):
 
         encoder_outputs = self.encoder(embedded_inputs, text_lengths)
 
+        if hasattr(self, 'gst'):
+            embedded_gst = self.gst(mels, output_lengths)
+            embedded_gst = embedded_gst.repeat(1, encoder_outputs.size(1), 1)
+
+            encoder_outputs = torch.cat(
+                (encoder_outputs, embedded_gst), dim=2)
+
         mel_outputs, gate_outputs, alignments = self.decoder(
             encoder_outputs, mels, memory_lengths=text_lengths)
 
@@ -65,9 +74,24 @@ class Tacotron2(nn.Module):
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
             output_lengths)
 
-    def inference(self, inputs):
-        embedded_inputs = self.embedding(inputs).transpose(1, 2)
+    def inference(self, input, style_input):
+
+        embedded_inputs = self.embedding(input).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
+
+        if hasattr(self, 'gst'):
+            if isinstance(style_input, int):
+                query = torch.zeros(1, 1, self.gst.encoder.ref_enc_gru_size).cuda()
+                GST = torch.tanh(self.gst.stl.embed)
+                key = GST[style_input].unsqueeze(0).expand(1, -1, -1)
+                embedded_gst = self.gst.stl.attention(query, key)
+            else:
+                embedded_gst = self.gst(style_input)
+
+            embedded_gst = embedded_gst.repeat(1, encoder_outputs.size(1), 1)
+            encoder_outputs = torch.cat(
+                (encoder_outputs, embedded_gst), dim=2)
+
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
             encoder_outputs)
 

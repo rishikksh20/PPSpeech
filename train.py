@@ -1,16 +1,10 @@
 import os
 import time
 import argparse
-import math
-from numpy import finfo
-
+import tqdm
 import torch
-from utils.distributed import apply_gradient_allreduce
-import torch.distributed as dist
-from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 from dataset.text import symbols
-
 from model import Tacotron2
 from dataset.data_utils import TextMelLoader, TextMelCollate
 from core.loss_function import Tacotron2Loss
@@ -85,8 +79,9 @@ def validate(model, criterion, valset, iteration, batch_size,
                                 pin_memory=False, collate_fn=collate_fn)
 
         val_loss = 0.0
-        for i, batch in enumerate(val_loader):
-            x, y = model.parse_batch(batch)
+        pbar = tqdm.tqdm(val_loader, desc='Loading train data')
+        for i, data in enumerate(pbar):
+            x, y = model.parse_batch(data)
             y_pred = model(x)
             loss = criterion(y_pred, y)
             reduced_val_loss = loss.item()
@@ -148,13 +143,14 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
         print("Epoch: {}".format(epoch))
-        for i, batch in enumerate(train_loader):
+        pbar = tqdm.tqdm(train_loader, desc='Loading train data')
+        for data in pbar:
             start = time.perf_counter()
             for param_group in optimizer.param_groups:
                 param_group['lr'] = learning_rate
 
             model.zero_grad()
-            x, y = model.parse_batch(batch)
+            x, y = model.parse_batch(data)
             y_pred = model(x)
 
             loss = criterion(y_pred, y)
@@ -166,16 +162,17 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
 
             optimizer.step()
 
-            if not is_overflow :
+            if not is_overflow and (iteration % hparams.summary_interval == 0):
                 duration = time.perf_counter() - start
-                print("Train loss {} {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
-                    iteration, reduced_loss, grad_norm, duration))
+                pbar.set_description(
+                    " Loss %.04f | Grad Norm %.04f | step %d" % (reduced_loss, grad_norm, iteration))
+
                 logger.log_training(
                     reduced_loss, grad_norm, learning_rate, duration, iteration)
 
             if not is_overflow and (iteration % hparams.iters_per_checkpoint == 0):
                 validate(model, criterion, valset, iteration,
-                         hparams.batch_size, n_gpus, collate_fn, logger,
+                         hparams.batch_size, collate_fn, logger,
                         )
                 checkpoint_path = os.path.join(
                         output_directory, "checkpoint_{}_{}.pyt".format(name, iteration))
@@ -199,8 +196,8 @@ if __name__ == '__main__':
                         required=False, help='number of gpus')
     parser.add_argument('--name', type=str, default='default',
                         required=True, help='Experiment name')
-    parser.add_argument('--hparams', type=str,
-                        required=False, help='comma separated name=value pairs')
+    parser.add_argument('--config', type=str,
+                        required=False, help='Config file')
     parser.add_argument('--amp', action='store_true',
                         help='Mixed Precision Training')
 
@@ -210,11 +207,11 @@ if __name__ == '__main__':
     with open(args.config, 'r') as f:
         hp_str = ''.join(f.readlines())
 
-    torch.backends.cudnn.enabled = hparams.cudnn_enabled
-    torch.backends.cudnn.benchmark = hparams.cudnn_benchmark
+    torch.backends.cudnn.enabled = hp.cudnn_enabled
+    torch.backends.cudnn.benchmark = hp.cudnn_benchmark
 
-    print("cuDNN Enabled:", hparams.cudnn_enabled)
-    print("cuDNN Benchmark:", hparams.cudnn_benchmark)
+    print("cuDNN Enabled:", hp.cudnn_enabled)
+    print("cuDNN Benchmark:", hp.cudnn_benchmark)
 
     output_directory = os.path.join(args.checkpoint_directory, args.name)
     if not os.path.isdir(output_directory):

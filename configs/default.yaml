@@ -3,6 +3,7 @@
 ################################
 epochs : 500
 iters_per_checkpoint : 1000
+summary_interval : 10
 seed : 1234
 dist_backend : "nccl"
 dist_url : "tcp://localhost:54321"
@@ -13,7 +14,7 @@ ignore_layers : ['embedding.weight']
 ################################
 # Data Parameters             #
 ################################
-load_mel_from_disk : False
+load_mel_from_disk : True
 training_files : 'filelists/ljs_audio_text_train_filelist.txt'
 validation_files : 'filelists/ljs_audio_text_val_filelist.txt'
 text_cleaners : ['english_cleaners']
@@ -68,11 +69,11 @@ n_speakers : 123
 speaker_embedding_dim : 128
 
 # Reference encoder
-with_gst : True
-ref_enc_filters : [32 32 64 64 128 128]
-ref_enc_size : [3 3]
-ref_enc_strides : [2 2]
-ref_enc_pad : [1 1]
+with_gst : False
+ref_enc_filters : [32, 32, 64, 64, 128, 128]
+ref_enc_size : [3, 3]
+ref_enc_strides : [2, 2]
+ref_enc_pad : [1, 1]
 ref_enc_gru_size : 128
 
 # Style Token Layer
@@ -84,8 +85,8 @@ num_heads : 8
 # Optimization Hyperparameters #
 ################################
 use_saved_learning_rate : False
-learning_rate : 1e-3
-weight_decay : 1e-6
+learning_rate : 0.001
+weight_decay : 0.000001
 grad_clip_thresh : 1.0
-batch_size : 64
+batch_size : 16
 mask_padding : True  # set model's padded outputs to padded values

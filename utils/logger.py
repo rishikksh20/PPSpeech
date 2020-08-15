@@ -1,6 +1,6 @@
 import random
 import torch
-from torch.utils.tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
 from utils.plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy
 from utils.plotting_utils import plot_gate_outputs_to_numpy
 
