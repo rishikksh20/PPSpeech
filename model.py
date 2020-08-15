@@ -74,7 +74,7 @@ class Tacotron2(nn.Module):
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
             output_lengths)
 
-    def inference(self, input, style_input):
+    def inference(self, input, style_input = None):
 
         embedded_inputs = self.embedding(input).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
