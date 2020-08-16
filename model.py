@@ -6,9 +6,9 @@ from core.modules import Encoder, Decoder, Postnet
 from core.gst import GST
 
 
-class Tacotron2(nn.Module):
+class PPSpeech(nn.Module):
     def __init__(self, hparams, n_symbols):
-        super(Tacotron2, self).__init__()
+        super(PPSpeech, self).__init__()
         self.mask_padding = hparams.mask_padding
         self.n_mel_channels = hparams.n_mel_channels
         self.n_frames_per_step = hparams.n_frames_per_step

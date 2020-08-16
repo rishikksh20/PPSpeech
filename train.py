@@ -5,7 +5,7 @@ import tqdm
 import torch
 from torch.utils.data import DataLoader
 from dataset.text import symbols
-from model import Tacotron2
+from model import PPSpeech
 from dataset.data_utils import TextMelLoader, TextMelCollate
 from core.loss_function import Tacotron2Loss
 from utils.logger import Tacotron2Logger
@@ -111,7 +111,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     torch.cuda.manual_seed(hparams.seed)
 
     n_symbols = len(symbols)
-    model = Tacotron2(hparams, n_symbols).cuda()
+    model = PPSpeech(hparams, n_symbols).cuda()
     learning_rate = hparams.learning_rate
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                                  weight_decay=hparams.weight_decay)
