@@ -29,19 +29,19 @@ class TextMelLoader(torch.utils.data.Dataset):
 
     def get_mel_text_pair(self, audiopath_and_text):
         # separate filename and text
-        audiopath, pre_text, text, post_text = audiopath_and_text[0], audiopath_and_text[1], audiopath_and_text[2], audiopath_and_text[3]
+        audiopath, pre_text, text, post_text, pre_mel_size, mel_size = audiopath_and_text[0], audiopath_and_text[1], \
+                                                                       audiopath_and_text[2], audiopath_and_text[3], \
+                                                                       audiopath_and_text[4], audiopath_and_text[5]
         pre_text = self.get_text(pre_text)
         text = self.get_text(text)
         post_text = self.get_text(post_text)
         # pre_mel, mel, post_mel = self.get_mel(audiopath)
-        mel = self.get_mel(audiopath)
+        mel = self.get_mel(audiopath, pre_mel_size, mel_size)
         return (pre_text, text, post_text, mel)
 
-    def get_mel(self, filename):
+    def get_mel(self, filename, pre_mel_size, mel_size):
         melspec = torch.from_numpy(np.load(filename.replace(".wav", ".npy")))
-        # size_of_pre = torch.from_numpy(np.load(filename.replace(".wav", ".npy")))
-        # size_of_current = torch.from_numpy(np.load(filename.replace(".wav", ".npy")))
-        # size_of_post = torch.from_numpy(np.load(filename.replace(".wav", ".npy")))
+
         assert melspec.size(0) == self.stft.n_mel_channels, (
             'Mel dimension mismatch: given {}, expected {}'.format(
                 melspec.size(0), self.stft.n_mel_channels))
@@ -51,7 +51,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         # assert post_mel.size(1) == size_of_post
         # assert (pre_mel.size(1) + mel.size(1) + post_mel.size(1)) == melspec.size(1)
         # return pre_mel, mel, post_mel
-        return melspec
+        return melspec[:, pre_mel_size: pre_mel_size + mel_size]
 
     def get_text(self, text):
         text_norm = torch.IntTensor(text_to_sequence(text, self.text_cleaners))
