@@ -72,11 +72,11 @@ class PPSpeech(nn.Module):
         pre_embed = self.encoder(pre_embedded_inputs, pre_text_len)
         post_embed = self.encoder(post_embedded_inputs, post_text_len)
 
-        context_embed = self.context_encoder(pre_embed, pre_text_len, post_embed, post_text_len)
+        context_embed = self.context_encoder(pre_embed, post_embed)
 
         context_embed = context_embed.repeat(1, encoder_outputs.size(1), 1)
 
-        acoustic_embed = self.acoustic_embed(mels, output_lengths)
+        acoustic_embed = self.acoustic_embed(mels)
         acoustic_embed = acoustic_embed.repeat(1, encoder_outputs.size(1), 1)
 
         # Context concat to encoder output
@@ -104,7 +104,7 @@ class PPSpeech(nn.Module):
         pre_embed = self.encoder.inference(pre_embedded_inputs)
         post_embed = self.encoder.inference(post_embedded_inputs)
 
-        context_embed = self.context_encoder(pre_embed, post_inputs=post_embed)
+        context_embed = self.context_encoder(pre_embed, post_embed)
         context_embed = context_embed.repeat(1, encoder_outputs.size(1), 1)
 
         acoustic_embed = self.acoustic_embed(style_input)
