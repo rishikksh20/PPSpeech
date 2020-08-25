@@ -75,19 +75,19 @@ class ReferenceEncoder(nn.Module):
                         out, input_lengths, batch_first=True, enforce_sorted=False)
 
         self.gru.flatten_parameters()
-        _, out = self.gru(out)
-        return out.squeeze(0)
+        _, out = self.gru(out) # [1, 2, 128]
+        return out.squeeze(0) # [2, 128]
 
     def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
         for _ in range(n_convs):
             L = (L - kernel_size + 2 * pad) // stride + 1
         return L
 
-
 class STL(nn.Module):
     '''
     inputs --- [N, token_embedding_size//2]
     '''
+
     def __init__(self, hp):
         super().__init__()
         self.embed = nn.Parameter(torch.FloatTensor(hp.token_num, hp.token_embedding_size // hp.num_heads))
@@ -101,12 +101,11 @@ class STL(nn.Module):
 
     def forward(self, inputs):
         N = inputs.size(0)
-        query = inputs.unsqueeze(1)
-        keys = torch.tanh(self.embed).unsqueeze(0).expand(N, -1, -1)  # [N, token_num, token_embedding_size // num_heads]
-        style_embed = self.attention(query, keys)
-
+        query = inputs.unsqueeze(1) # [2, 1, 128]
+        keys = torch.tanh(self.embed).unsqueeze(0).expand(N, -1,
+                                                          -1)  # [N, token_num, token_embedding_size // num_heads] -> [2, 10, 32]
+        style_embed = self.attention(query, keys) # [N, T_q, num_units] -> [2, 1, 256]
         return style_embed
-
 
 class MultiHeadAttention(nn.Module):
     '''
@@ -116,6 +115,7 @@ class MultiHeadAttention(nn.Module):
     output:
         out --- [N, T_q, num_units]
     '''
+
     def __init__(self, query_dim, key_dim, num_units, num_heads):
         super().__init__()
         self.num_units = num_units
@@ -127,23 +127,30 @@ class MultiHeadAttention(nn.Module):
         self.W_value = nn.Linear(in_features=key_dim, out_features=num_units, bias=False)
 
     def forward(self, query, key):
-        querys = self.W_query(query)  # [N, T_q, num_units]
-        keys = self.W_key(key)  # [N, T_k, num_units]
-        values = self.W_value(key)
+
+        querys = self.W_query(query)  # [N, T_q, num_units] -> torch.Size([2, 1, 256])
+
+        keys = self.W_key(key)  # [N, T_k, num_units] -> torch.Size([2, 10, 256])
+
+        values = self.W_value(key) # torch.Size([2, 10, 256])
+
 
         split_size = self.num_units // self.num_heads
-        querys = torch.stack(torch.split(querys, split_size, dim=2), dim=0)  # [h, N, T_q, num_units/h]
-        keys = torch.stack(torch.split(keys, split_size, dim=2), dim=0)  # [h, N, T_k, num_units/h]
-        values = torch.stack(torch.split(values, split_size, dim=2), dim=0)  # [h, N, T_k, num_units/h]
+        querys = torch.stack(torch.split(querys, split_size, dim=2), dim=0)  # [h, N, T_q, num_units/h] -> [8, 2, 1, 32]
+
+        keys = torch.stack(torch.split(keys, split_size, dim=2), dim=0)  # [h, N, T_k, num_units/h] -> [8, 2, 10, 32]
+
+        values = torch.stack(torch.split(values, split_size, dim=2), dim=0)  # [h, N, T_k, num_units/h] -> [8, 2, 10, 32]
+
 
         # score = softmax(QK^T / (d_k ** 0.5))
-        scores = torch.matmul(querys, keys.transpose(2, 3))  # [h, N, T_q, T_k]
-        scores = scores / (self.key_dim ** 0.5)
-        scores = F.softmax(scores, dim=3)
+        scores = torch.matmul(querys, keys.transpose(2, 3))  # [h, N, T_q, T_k] -> [8, 2, 1, 10]
+        scores = scores / (self.key_dim ** 0.5) # [h, N, T_q, T_k] -> [8, 2, 1, 10]
+        scores = F.softmax(scores, dim=3) # [h, N, T_q, T_k] -> [8, 2, 1, 10]
 
         # out = score * V
-        out = torch.matmul(scores, values)  # [h, N, T_q, num_units/h]
-        out = torch.cat(torch.split(out, 1, dim=0), dim=3).squeeze(0)  # [N, T_q, num_units]
+        out = torch.matmul(scores, values)  # [h, N, T_q, num_units/h] -> [8, 2, 1, 32]
+        out = torch.cat(torch.split(out, 1, dim=0), dim=3).squeeze(0)  # [N, T_q, num_units] -> [2, 1, 256]
 
         return out
 
