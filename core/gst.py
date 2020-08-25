@@ -171,7 +171,7 @@ class GST(nn.Module):
             post_context_embed = self.encoder_post(post_inputs, input_lengths=post_input_lengths)
             context_embed = torch.cat((pre_context_embed, post_context_embed), dim=2)
         else:
-            context_embed = self.encoder(inputs, input_lengths=input_lengths) 
+            context_embed = self.encoder(inputs, input_lengths=input_lengths)
         style_embed = self.stl(context_embed)
 
         return style_embed
