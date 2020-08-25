@@ -20,8 +20,7 @@ class PPSpeech(nn.Module):
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
-        self.prefix_embed = GST(hparams)
-        self.postfix_embed = GST(hparams)
+        self.context_encoder = GST(hparams, True)
         self.acoustic_embed = GST(hparams)
 
     def parse_batch(self, batch):
@@ -73,9 +72,8 @@ class PPSpeech(nn.Module):
         pre_embed = self.encoder(pre_embedded_inputs, pre_text_len)
         post_embed = self.encoder(post_embedded_inputs, post_text_len)
 
-        pre_context_embed = self.prefix_embed(pre_embed, pre_text_len)
-        post_context_embed = self.postfix_embed(post_embed, post_text_len)
-        context_embed = torch.cat((pre_context_embed, post_context_embed), dim=2)
+        context_embed = self.context_encoder(pre_embed, pre_text_len, post_embed, post_text_len)
+
         context_embed = context_embed.repeat(1, encoder_outputs.size(1), 1)
 
         acoustic_embed = self.acoustic_embed(mels, output_lengths)

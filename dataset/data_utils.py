@@ -4,7 +4,7 @@ import torch
 import torch.utils.data
 
 from core import layers
-from utils.utils import load_wav_to_torch, load_filepaths_and_text
+from utils.utils import load_filepaths_and_text
 from dataset.text import text_to_sequence
 
 

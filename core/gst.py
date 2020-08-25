@@ -34,7 +34,7 @@ class ReferenceEncoder(nn.Module):
     outputs --- [N, ref_enc_gru_size]
     '''
 
-    def __init__(self, hp):
+    def __init__(self, hp, is_text=False):
 
         super().__init__()
         K = len(hp.ref_enc_filters)
@@ -49,8 +49,11 @@ class ReferenceEncoder(nn.Module):
         self.bns = nn.ModuleList(
             [nn.BatchNorm2d(num_features=hp.ref_enc_filters[i])
              for i in range(K)])
-
-        out_channels = self.calculate_channels(hp.n_mel_channels, 3, 2, 1, K)
+        self.is_text = is_text
+        if self.is_text:
+            out_channels = self.calculate_channels(hp.encoder_embedding_dim, 3, 2, 1, K)
+        else:
+            out_channels = self.calculate_channels(hp.n_mel_channels, 3, 2, 1, K)
         self.gru = nn.GRU(input_size=hp.ref_enc_filters[-1] * out_channels,
                           hidden_size=hp.ref_enc_gru_size,
                           batch_first=True)
@@ -58,7 +61,10 @@ class ReferenceEncoder(nn.Module):
         self.ref_enc_gru_size = hp.ref_enc_gru_size
 
     def forward(self, inputs, input_lengths=None):
-        out = inputs.view(inputs.size(0), 1, -1, self.n_mel_channels)
+        if self.is_text:
+            out = inputs.unsqueeze(1)
+        else:
+            out = inputs.view(inputs.size(0), 1, -1, self.n_mel_channels)
         for conv, bn in zip(self.convs, self.bns):
             out = conv(out)
             out = bn(out)
@@ -149,13 +155,16 @@ class MultiHeadAttention(nn.Module):
 
 
 class GST(nn.Module):
-    def __init__(self, hp):
+    def __init__(self, hp, is_text=False):
         super().__init__()
-        self.encoder = ReferenceEncoder(hp)
+        self.encoder_pre = ReferenceEncoder(hp, is_text)
+        self.encoder_post = ReferenceEncoder(hp, is_text)
         self.stl = STL(hp)
 
-    def forward(self, inputs, input_lengths=None):
-        enc_out = self.encoder(inputs, input_lengths=input_lengths)
-        style_embed = self.stl(enc_out)
+    def forward(self, pre_inputs, pre_input_lengths=None, post_inputs=None, post_input_lengths=None):
+        pre_context_embed = self.encoder_pre(pre_inputs, input_lengths=pre_input_lengths)
+        post_context_embed = self.encoder_post(post_inputs, input_lengths=post_input_lengths)
+        context_embed = torch.cat((pre_context_embed, post_context_embed), dim=2)
+        style_embed = self.stl(context_embed)
 
         return style_embed
