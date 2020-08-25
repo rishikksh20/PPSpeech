@@ -31,7 +31,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         # separate filename and text
         audiopath, pre_text, text, post_text, pre_mel_size, mel_size = audiopath_and_text[0], audiopath_and_text[1], \
                                                                        audiopath_and_text[2], audiopath_and_text[3], \
-                                                                       audiopath_and_text[4], audiopath_and_text[5]
+                                                                       int(audiopath_and_text[4]), int(audiopath_and_text[5])
         pre_text = self.get_text(pre_text)
         text = self.get_text(text)
         post_text = self.get_text(post_text)
@@ -40,7 +40,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         return (pre_text, text, post_text, mel)
 
     def get_mel(self, filename, pre_mel_size, mel_size):
-        melspec = torch.from_numpy(np.load(filename.replace(".wav", ".npy")))
+        melspec = torch.from_numpy(np.load("data/mels/" + filename + ".npy")))
 
         assert melspec.size(0) == self.stft.n_mel_channels, (
             'Mel dimension mismatch: given {}, expected {}'.format(
