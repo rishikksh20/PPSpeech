@@ -58,16 +58,19 @@ class ReferenceEncoder(nn.Module):
         self.ref_enc_gru_size = hp.ref_enc_gru_size
 
     def forward(self, inputs, input_lengths=None):
-        out = inputs.view(inputs.size(0), 1, -1, self.n_mel_channels)
+        # inputs -> [2, 80, 863] in mels case for context -> [batch, tex_len, 512]
+        out = inputs.view(inputs.size(0), 1, -1, self.n_mel_channels) # [2, 1, 863, 80]
+
         for conv, bn in zip(self.convs, self.bns):
             out = conv(out)
             out = bn(out)
             out = F.relu(out)
+        # out  [2, 128, 14, 2]
+        out = out.transpose(1, 2)  # [N, Ty//2^K, 128, n_mels//2^K] -> [2, 14, 128, 2]
 
-        out = out.transpose(1, 2)  # [N, Ty//2^K, 128, n_mels//2^K]
         N, T = out.size(0), out.size(1)
-        out = out.contiguous().view(N, T, -1)  # [N, Ty//2^K, 128*n_mels//2^K]
-
+        out = out.contiguous().view(N, T, -1)  # [N, Ty//2^K, 128*n_mels//2^K] -> [2, 14, 256]
+        
         if input_lengths is not None:
             input_lengths = (input_lengths.cpu().numpy() / 2 ** len(self.convs))
             input_lengths = input_lengths.round().astype(int)
