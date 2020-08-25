@@ -157,14 +157,21 @@ class MultiHeadAttention(nn.Module):
 class GST(nn.Module):
     def __init__(self, hp, is_text=False):
         super().__init__()
-        self.encoder_pre = ReferenceEncoder(hp, is_text)
-        self.encoder_post = ReferenceEncoder(hp, is_text)
+        self.is_text = is_text
+        if is_text:
+            self.encoder_pre = ReferenceEncoder(hp, is_text)
+            self.encoder_post = ReferenceEncoder(hp, is_text)
+        else:
+            self.encoder = ReferenceEncoder(hp)
         self.stl = STL(hp)
 
-    def forward(self, pre_inputs, pre_input_lengths=None, post_inputs=None, post_input_lengths=None):
-        pre_context_embed = self.encoder_pre(pre_inputs, input_lengths=pre_input_lengths)
-        post_context_embed = self.encoder_post(post_inputs, input_lengths=post_input_lengths)
-        context_embed = torch.cat((pre_context_embed, post_context_embed), dim=2)
+    def forward(self, inputs, input_lengths=None, post_inputs=None, post_input_lengths=None):
+        if self.is_text:
+            pre_context_embed = self.encoder_pre(inputs, input_lengths=input_lengths)
+            post_context_embed = self.encoder_post(post_inputs, input_lengths=post_input_lengths)
+            context_embed = torch.cat((pre_context_embed, post_context_embed), dim=2)
+        else:
+            context_embed = self.encoder(inputs, input_lengths=input_lengths) 
         style_embed = self.stl(context_embed)
 
         return style_embed
