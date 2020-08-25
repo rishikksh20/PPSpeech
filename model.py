@@ -104,9 +104,7 @@ class PPSpeech(nn.Module):
         pre_embed = self.encoder.inference(pre_embedded_inputs)
         post_embed = self.encoder.inference(post_embedded_inputs)
 
-        pre_context_embed = self.prefix_embed(pre_embed)
-        post_context_embed = self.postfix_embed(post_embed)
-        context_embed = torch.cat((pre_context_embed, post_context_embed), dim=2)
+        context_embed = self.context_encoder(pre_embed, post_inputs=post_embed)
         context_embed = context_embed.repeat(1, encoder_outputs.size(1), 1)
 
         acoustic_embed = self.acoustic_embed(style_input)
