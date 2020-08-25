@@ -49,18 +49,18 @@ class ReferenceEncoder(nn.Module):
         self.bns = nn.ModuleList(
             [nn.BatchNorm2d(num_features=hp.ref_enc_filters[i])
              for i in range(K)])
+
         self.is_text = is_text
-        if self.is_text:
-            out_channels = self.calculate_channels(hp.encoder_embedding_dim, 3, 2, 1, K)
-        else:
-            out_channels = self.calculate_channels(hp.n_mel_channels, 3, 2, 1, K)
+        out_channels = self.calculate_channels(hp.encoder_embedding_dim if self.is_text else hp.n_mel_channels, 3, 2, 1,
+                                               K)
+        self.ref_enc_gru_size = hp.ref_enc_gru_size // 2
         self.gru = nn.GRU(input_size=hp.ref_enc_filters[-1] * out_channels,
-                          hidden_size=hp.ref_enc_gru_size,
+                          hidden_size=self.ref_enc_gru_size,
                           batch_first=True)
         self.n_mel_channels = hp.n_mel_channels
-        self.ref_enc_gru_size = hp.ref_enc_gru_size
 
     def forward(self, inputs, input_lengths=None):
+
         if self.is_text:
             out = inputs.unsqueeze(1)
         else:
@@ -73,15 +73,20 @@ class ReferenceEncoder(nn.Module):
         out = out.transpose(1, 2)  # [N, Ty//2^K, 128, n_mels//2^K]
         N, T = out.size(0), out.size(1)
         out = out.contiguous().view(N, T, -1)  # [N, Ty//2^K, 128*n_mels//2^K]
-
-        if input_lengths is not None:
-            input_lengths = (input_lengths.cpu().numpy() / 2 ** len(self.convs))
-            input_lengths = input_lengths.round().astype(int)
-            out = nn.utils.rnn.pack_padded_sequence(
-                        out, input_lengths, batch_first=True, enforce_sorted=False)
+        # print(out.shape, "1")
+        # if input_lengths is not None:
+        #     input_lengths = (input_lengths.cpu().numpy() / 2 ** len(self.convs))
+        #     input_lengths = input_lengths.round().astype(int)
+        #     #print(out.shape, "2")
+        #     print("\n \t Out : \t", out)
+        #     print("\n \t input_lengths : \t", input_lengths)
+        #     out = nn.utils.rnn.pack_padded_sequence(
+        #                 out, input_lengths, batch_first=True, enforce_sorted=False)
 
         self.gru.flatten_parameters()
+        # print(out.shape, "3")
         _, out = self.gru(out)
+
         return out.squeeze(0)
 
     def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
@@ -94,23 +99,23 @@ class STL(nn.Module):
     '''
     inputs --- [N, token_embedding_size//2]
     '''
-    def __init__(self, hp):
-        super().__init__()
-        self.embed = nn.Parameter(torch.FloatTensor(hp.token_num, hp.token_embedding_size // hp.num_heads))
-        d_q = hp.token_embedding_size // 2
-        d_k = hp.token_embedding_size // hp.num_heads
-        self.attention = MultiHeadAttention(
-            query_dim=d_q, key_dim=d_k, num_units=hp.token_embedding_size,
-            num_heads=hp.num_heads)
 
+    def __init__(self, hp, num_units):
+        super().__init__()
+        self.embed = nn.Parameter(torch.FloatTensor(hp.token_num, num_units // hp.num_heads))
+        d_q = num_units // 2
+        d_k = num_units // hp.num_heads
+        self.attention = MultiHeadAttention(
+            query_dim=d_q, key_dim=d_k, num_units=num_units,
+            num_heads=hp.num_heads)
         init.normal_(self.embed, mean=0, std=0.5)
 
     def forward(self, inputs):
         N = inputs.size(0)
         query = inputs.unsqueeze(1)
-        keys = torch.tanh(self.embed).unsqueeze(0).expand(N, -1, -1)  # [N, token_num, token_embedding_size // num_heads]
+        keys = torch.tanh(self.embed).unsqueeze(0).expand(N, -1,
+                                                          -1)  # [N, token_num, token_embedding_size // num_heads]
         style_embed = self.attention(query, keys)
-
         return style_embed
 
 
@@ -122,6 +127,7 @@ class MultiHeadAttention(nn.Module):
     output:
         out --- [N, T_q, num_units]
     '''
+
     def __init__(self, query_dim, key_dim, num_units, num_heads):
         super().__init__()
         self.num_units = num_units
@@ -134,6 +140,7 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, query, key):
         querys = self.W_query(query)  # [N, T_q, num_units]
+
         keys = self.W_key(key)  # [N, T_k, num_units]
         values = self.W_value(key)
 
@@ -161,17 +168,17 @@ class GST(nn.Module):
         if is_text:
             self.encoder_pre = ReferenceEncoder(hp, is_text)
             self.encoder_post = ReferenceEncoder(hp, is_text)
+            self.stl = STL(hp, hp.token_embedding_size * 2)
         else:
             self.encoder = ReferenceEncoder(hp)
-        self.stl = STL(hp)
+            self.stl = STL(hp, hp.token_embedding_size)
 
     def forward(self, inputs, input_lengths=None, post_inputs=None, post_input_lengths=None):
         if self.is_text:
             pre_context_embed = self.encoder_pre(inputs, input_lengths=input_lengths)
             post_context_embed = self.encoder_post(post_inputs, input_lengths=post_input_lengths)
-            context_embed = torch.cat((pre_context_embed, post_context_embed), dim=2)
+            context_embed = torch.cat((pre_context_embed, post_context_embed), dim=1)
         else:
             context_embed = self.encoder(inputs, input_lengths=input_lengths)
         style_embed = self.stl(context_embed)
-
         return style_embed
