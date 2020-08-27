@@ -11,6 +11,7 @@ from core.loss_function import Tacotron2Loss
 from utils.logger import Tacotron2Logger
 from utils.hparams import HParam
 
+vocoder = torch.hub.load('seungwonpark/melgan', 'melgan')
 
 def prepare_dataloaders(hparams):
     # Get data, data loaders and collate function ready
@@ -69,7 +70,7 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
 
 
 def validate(model, criterion, valset, iteration, batch_size,
-             collate_fn, logger):
+             collate_fn, logger, vocoder):
     """Handles all the validation scoring and printing"""
     model.eval()
     with torch.no_grad():
@@ -90,7 +91,7 @@ def validate(model, criterion, valset, iteration, batch_size,
 
     model.train()
     print("Validation loss {}: {:9f}  ".format(iteration, val_loss))
-    logger.log_validation(val_loss, model, y, y_pred, iteration)
+    logger.log_validation(val_loss, model, y, y_pred, iteration, vocoder)
 
 
 def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
@@ -172,7 +173,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
 
             if not is_overflow and (iteration % hparams.iters_per_checkpoint == 0):
                 validate(model, criterion, valset, iteration,
-                         hparams.batch_size, collate_fn, logger,
+                         hparams.batch_size, collate_fn, logger, vocoder
                         )
                 checkpoint_path = os.path.join(
                         output_directory, "checkpoint_{}_{}.pyt".format(name, iteration))
