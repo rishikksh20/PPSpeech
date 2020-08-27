@@ -59,3 +59,20 @@ def plot_gate_outputs_to_numpy(gate_targets, gate_outputs):
     data = save_figure_to_numpy(fig)
     plt.close()
     return data
+
+def generate_audio(mel, vocoder):
+    # input mel shape - [1,80,T]
+    # output - (S,) range [-1,1]
+    vocoder.eval()
+    if torch.cuda.is_available():
+        vocoder = vocoder.cuda()
+        mel = mel.cuda()
+
+    with torch.no_grad():
+        audio = vocoder.inference(mel)
+        audio = vocoder(mel)
+    
+    audio = audio.cpu().detach().numpy()
+    audio = audio.squeeze()
+    audio = audio/(audio.max() - audio.min()) 
+    return audio
