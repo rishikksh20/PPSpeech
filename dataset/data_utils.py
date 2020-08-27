@@ -40,7 +40,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         return (pre_text, text, post_text, mel)
 
     def get_mel(self, filename, pre_mel_size, mel_size):
-        melspec = torch.from_numpy(np.load("data/mels/" + filename + ".npy")))
+        melspec = torch.from_numpy(np.load("data/mels/" + filename + ".npy"))
 
         assert melspec.size(0) == self.stft.n_mel_channels, (
             'Mel dimension mismatch: given {}, expected {}'.format(
