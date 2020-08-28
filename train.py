@@ -10,6 +10,7 @@ from dataset.data_utils import TextMelLoader, TextMelCollate
 from core.loss_function import Tacotron2Loss
 from utils.logger import Tacotron2Logger
 from utils.hparams import HParam
+from torch.cuda import amp
 
 vocoder = torch.hub.load('seungwonpark/melgan', 'melgan')
 
@@ -94,7 +95,7 @@ def validate(model, criterion, valset, iteration, batch_size,
     logger.log_validation(val_loss, model, y, y_pred, iteration, vocoder)
 
 
-def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
+def train(output_directory, log_directory, checkpoint_path, warm_start, use_amp,
           name, hparams):
     """Training and validation logging results to tensorboard and stdout
 
@@ -110,6 +111,9 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
 
     torch.manual_seed(hparams.seed)
     torch.cuda.manual_seed(hparams.seed)
+    if use_amp:
+        print("Automatic Mixed Precision Training")
+        scaler = amp.GradScaler()
 
     n_symbols = len(symbols)
     model = PPSpeech(hparams, n_symbols).cuda()
@@ -152,17 +156,26 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
 
             model.zero_grad()
             x, y = model.parse_batch(data)
-            y_pred = model(x)
-
-            loss = criterion(y_pred, y)
-            reduced_loss = loss.item()
-            loss.backward()
-
-            grad_norm = torch.nn.utils.clip_grad_norm_(
+            if use_amp:
+                with amp.autocast():
+                    y_pred = model(x)
+                    loss = criterion(y_pred, y)
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                grad_norm = torch.nn.utils.clip_grad_norm_(
                     model.parameters(), hparams.grad_clip_thresh)
+                scaler.step(optimizer)
+                scaler.update()
 
-            optimizer.step()
+            else:
+                y_pred = model(x)
+                loss = criterion(y_pred, y)
+                loss.backward()
+                grad_norm = torch.nn.utils.clip_grad_norm_(
+                        model.parameters(), hparams.grad_clip_thresh)
 
+                optimizer.step()
+            reduced_loss = loss.item()
             if not is_overflow and (iteration % hparams.summary_interval == 0):
                 duration = time.perf_counter() - start
                 pbar.set_description(
@@ -223,4 +236,4 @@ if __name__ == '__main__':
         os.makedirs(log_directory)
         os.chmod(log_directory, 0o775)
     train(output_directory, log_directory, args.checkpoint_path,
-          args.warm_start, args.n_gpus, args.name, hp)
+          args.warm_start, args.amp, args.name, hp)
