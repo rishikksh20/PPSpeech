@@ -1,4 +1,5 @@
 # PPSpeech: Phrase based Parallel End-to-End TTS System
+[![HitCount](http://hits.dwyl.com/rishikksh20/PPSpeech.svg)](http://hits.dwyl.com/rishikksh20/PPSpeech) <br/>
 Pytorch implementation of [PPSpeech: Phrase based Parallel End-to-End TTS System](https://arxiv.org/ftp/arxiv/papers/2008/2008.02490.pdf).
 
 ![](./assets/model.JPG)
