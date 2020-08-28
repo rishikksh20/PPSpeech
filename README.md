@@ -1,7 +1,6 @@
 # PPSpeech: Phrase based Parallel End-to-End TTS System
+Pytorch implementation of [PPSpeech: Phrase based Parallel End-to-End TTS System](https://arxiv.org/ftp/arxiv/papers/2008/2008.02490.pdf). <br /> <br />
 [![HitCount](http://hits.dwyl.com/rishikksh20/PPSpeech.svg)](http://hits.dwyl.com/rishikksh20/PPSpeech) <br/>
-Pytorch implementation of [PPSpeech: Phrase based Parallel End-to-End TTS System](https://arxiv.org/ftp/arxiv/papers/2008/2008.02490.pdf).
-
 ![](./assets/model.JPG)
 ## Requirements :
 All code written in `Python 3.6.2` .
