@@ -1,0 +1,50 @@
+LJ001-0001|printing  in the|only sense with  which we are|at present concerned  differs|97|234
+LJ001-0001| in the only|sense with  which we are at|present concerned  differs |126|248
+LJ001-0001|in the only sense|with  which we are at present|concerned  differs  from|166|282
+LJ001-0001|the only sense with| which we are at present concerned| differs  from most|179|341
+LJ001-0001|only sense with |which we are at present concerned |differs  from most if|182|377
+LJ001-0001|sense with  which|we are at present concerned  differs| from most if not|203|431
+LJ001-0001|with  which we|are at present concerned  differs |from most if not from|218|433
+LJ001-0001| which we are|at present concerned  differs  from|most if not from all|234|452
+LJ001-0001|which we are at|present concerned  differs  from most|if not from all the|248|487
+LJ001-0001|we are at present|concerned  differs  from most if|not from all the arts|282|500
+LJ001-0001|are at present concerned| differs  from most if not|from all the arts and|341|525
+LJ001-0001|at present concerned |differs  from most if not from|all the arts and crafts|377|542
+LJ001-0001|present concerned  differs| from most if not from all|the arts and crafts represented|431|571
+LJ001-0001|concerned  differs |from most if not from all the|arts and crafts represented in|433|584
+LJ001-0002|^|in being comparatively modern |~|0|155
+LJ001-0003|for although  the|chinese took impressions  from wood blocks| engraved in relief |52|297
+LJ001-0003|although  the chinese|took impressions  from wood blocks |engraved in relief  for|109|313
+LJ001-0003| the chinese took|impressions  from wood blocks  engraved|in relief  for centuries|125|375
+LJ001-0003|the chinese took impressions| from wood blocks  engraved in|relief  for centuries before|196|386
+LJ001-0003|chinese took impressions |from wood blocks  engraved in relief| for centuries before the|199|423
+LJ001-0003|took impressions  from|wood blocks  engraved in relief |for centuries before the woodcutters|221|426
+LJ001-0003|impressions  from wood|blocks  engraved in relief  for|centuries before the woodcutters of|244|439
+LJ001-0003| from wood blocks| engraved in relief  for centuries|before the woodcutters of the|297|493
+LJ001-0003|from wood blocks |engraved in relief  for centuries before|the woodcutters of the netherlands|313|523
+LJ001-0003|wood blocks  engraved|in relief  for centuries before the|woodcutters of the netherlands |375|532
+LJ001-0003|blocks  engraved in|relief  for centuries before the woodcutters|of the netherlands  by|386|593
+LJ001-0003| engraved in relief| for centuries before the woodcutters of|the netherlands  by a|423|606
+LJ001-0005|the invention of movable|metal letters in the middle of the|fifteenth century  may justly|103|239
+LJ001-0005|invention of movable metal|letters in the middle of the fifteenth|century  may justly be|135|287
+LJ001-0005|of movable metal letters|in the middle of the fifteenth century| may justly be considered|181|343
+LJ001-0005|movable metal letters in|the middle of the fifteenth century |may justly be considered |189|362
+LJ001-0005|metal letters in the|middle of the fifteenth century  may|justly be considered  as|194|380
+LJ001-0005|letters in the middle|of the fifteenth century  may justly|be considered  as the|221|424
+LJ001-0005|in the middle of|the fifteenth century  may justly be|considered  as the invention|231|439
+LJ001-0005|the middle of the|fifteenth century  may justly be considered| as the invention of|239|495
+LJ001-0005|middle of the fifteenth|century  may justly be considered |as the invention of the|287|517
+LJ001-0005|of the fifteenth century| may justly be considered  as|the invention of the art|343|537
+LJ001-0005|the fifteenth century |may justly be considered  as the|invention of the art of|362|550
+LJ001-0006|and  it is|worth mention in passing  that |as an example of fine|72|264
+LJ001-0007|the earliest book printed|with movable types  the gutenberg |or  forty two line|139|363
+LJ001-0007|earliest book printed with|movable types  the gutenberg  or| forty two line bible|157|394
+LJ001-0007|book printed with movable|types  the gutenberg  or |forty two line bible |199|396
+LJ001-0007|printed with movable types| the gutenberg  or  forty|two line bible  of|252|427
+LJ001-0007|with movable types |the gutenberg  or  forty two|line bible  of about|273|446
+LJ001-0007|movable types  the|gutenberg  or  forty two line|bible  of about fourteen|287|487
+LJ001-0007|types  the gutenberg| or  forty two line bible| of about fourteen fifty|358|535
+LJ001-0008|^|has never been surpassed |~|0|147
+LJ001-0009|printing then for our|purpose  may be considered as the|art of making books |116|314
+LJ001-0009|then for our purpose| may be considered as the art|of making books  by|181|346
+LJ001-0009|for our purpose |may be considered as the art of|making books  by means|202|358
