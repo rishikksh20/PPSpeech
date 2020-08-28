@@ -12,7 +12,7 @@ from utils.logger import Tacotron2Logger
 from utils.hparams import HParam
 from torch.cuda import amp
 
-vocoder = torch.hub.load('seungwonpark/melgan', 'melgan')
+vocoder = None #torch.hub.load('seungwonpark/melgan', 'melgan')
 
 def prepare_dataloaders(hparams):
     # Get data, data loaders and collate function ready

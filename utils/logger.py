@@ -16,7 +16,7 @@ class Tacotron2Logger(SummaryWriter):
             self.add_scalar("learning.rate", learning_rate, iteration)
             self.add_scalar("duration", duration, iteration)
 
-    def log_validation(self, reduced_loss, model, y, y_pred, iteration, vocoder):
+    def log_validation(self, reduced_loss, model, y, y_pred, iteration, vocoder=None):
         self.add_scalar("validation.loss", reduced_loss, iteration)
         _, mel_outputs, gate_outputs, alignments = y_pred
         mel_targets, gate_targets = y
@@ -46,10 +46,11 @@ class Tacotron2Logger(SummaryWriter):
                 gate_targets[idx].data.cpu().numpy(),
                 torch.sigmoid(gate_outputs[idx]).data.cpu().numpy()),
             iteration, dataformats='HWC')
-        self.add_audio(
-            tag = "Target Audio",
-            snd_tensor= torch.Tensor(generate_audio(mel_targets[idx].data.unsqueeze(), vocoder)), global_step= iteration, sample_rate = 22050)
-        self.add_audio(
-            tag = "Output Audio",
-            snd_tensor= torch.Tensor(generate_audio(mel_outputs[idx].data.unsqueeze(), vocoder)), global_step= iteration, sample_rate = 22050)
+        if vocoder:
+            self.add_audio(
+                tag = "Target Audio",
+                snd_tensor= torch.Tensor(generate_audio(mel_targets[idx].data.unsqueeze(), vocoder)), global_step= iteration, sample_rate = 22050)
+            self.add_audio(
+                tag = "Output Audio",
+                snd_tensor= torch.Tensor(generate_audio(mel_outputs[idx].data.unsqueeze(), vocoder)), global_step= iteration, sample_rate = 22050)
         
