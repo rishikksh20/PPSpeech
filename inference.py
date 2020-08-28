@@ -100,7 +100,7 @@ def main(checkpoint_path, hparams, reference_mel, dataset, name ):
     else:
         output_mel = np.concatenate(output, axis = 1)
 
-    np.save(f"PPSpeech_{iteration}_{name}.npy", output_mel)
+    np.save(f"PPSpeech_{iteration}_{name}.npy", output_mel)    #output_mel: [1, 80, T]
     print(f"Mel generated with name PPSpeech_{iteration}_{name}.npy ")
 
     return
