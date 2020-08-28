@@ -19,20 +19,18 @@ def sentence_to_phrases(line, words=3):
             phrases.append(' '.join(wordlist[i:i+words]))
     return phrases
 
-def create_phrase_data(lines, words=4):
-    #
+def create_phrase_data(line, words=4):
     dataset=[]
-    for line in lines:
-        pre = []
-        current = []
-        post = []
+    pre = []
+    current = []
+    post = []
     if len(line.split()) < 8:
         pre.append("^")
         current.append(line)
         post.append("~")
     else:
         phrases = sentence_to_phrases(line, words=words)
-      #print(phrases)
+        #print(phrases, "The phrases are")
         for i in range(0, len(phrases), 1):
 
             if i == 0:
@@ -47,6 +45,7 @@ def create_phrase_data(lines, words=4):
                 break
             else:
                 post.append(phrases[i+1])
+                
     return pre, current, post
 
 def load_checkpoint(checkpoint_path, model):
@@ -59,29 +58,34 @@ def load_checkpoint(checkpoint_path, model):
     iteration = checkpoint_dict['iteration']
     print("Loaded checkpoint '{}' from iteration {}" .format(
         checkpoint_path, iteration))
-    return model
+    return model, iteration
 
 def process_input(text, mode):
+    print(f"Mode - {mode}")
     dataset = []
     if mode == 0:
-        pre = ["^"]
-        post = ["~"]
-        current = text.strip().split()
+        pre = ["^ ^ ^"]
+        post = ["~ ~ ~"]
+        current = [text]
     if mode == 1:
-        pre, current, post = create_phrase_data(text, 5)
+        pre, current, post = create_phrase_data(text, 4)
+        print(pre, current, post)
 
     for i, j, k in zip(pre, current, post):
         dataset.append("{}|{}|{}".format(i,j,k))
+    print(dataset)
 
     return dataset
 
 
 def main(checkpoint_path, hparams, reference_mel, dataset, name ):
     model = PPSpeech(hparams, len(symbols)).cuda()
-    model = load_checkpoint(checkpoint_path, model)
+    model, iteration = load_checkpoint(checkpoint_path, model)
     model.eval()
     output = []
     for point in dataset:
+        point = point.split("|")
+        #print(point, "First input")
         input_text = torch.LongTensor(text_to_sequence(point[1], hparams.text_cleaners)).cuda().unsqueeze(0)
         pre_text = torch.LongTensor(text_to_sequence(point[0], hparams.text_cleaners)).cuda().unsqueeze(0)
         post_text = torch.LongTensor(text_to_sequence(point[2], hparams.text_cleaners)).cuda().unsqueeze(0)
@@ -96,8 +100,8 @@ def main(checkpoint_path, hparams, reference_mel, dataset, name ):
     else:
         output_mel = np.concatenate(output, axis = 1)
 
-    np.save(f"PPSpeech_{name}.npy", mel.detach().cpu().numpy())
-    print(f"Mel generated with name PPSpeech_{name}.npy ")
+    np.save(f"PPSpeech_{iteration}_{name}.npy", mel.detach().cpu().numpy())
+    print(f"Mel generated with name PPSpeech_{iteration}_{name}.npy ")
 
     return
 
