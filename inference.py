@@ -94,13 +94,13 @@ def main(checkpoint_path, hparams, reference_mel, dataset, name ):
             print("predicting")
             outs = model.inference(input_text, pre_text, post_text, style_input = reference)
             mel = outs[0]
-            output.append(mel)
+            output.append(mel.detach().cpu().numpy())
     if len(output)==1:
         output_mel = output[0]
     else:
         output_mel = np.concatenate(output, axis = 1)
 
-    np.save(f"PPSpeech_{iteration}_{name}.npy", mel.detach().cpu().numpy())
+    np.save(f"PPSpeech_{iteration}_{name}.npy", output_mel)
     print(f"Mel generated with name PPSpeech_{iteration}_{name}.npy ")
 
     return
