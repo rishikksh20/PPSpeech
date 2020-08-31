@@ -25,23 +25,23 @@ def create_phrase_data(line, words=4):
     current = []
     post = []
     if len(line.split()) < 8:
-        pre.append("^")
+        pre.append("^ ^ ^")
         current.append(line)
-        post.append("~")
+        post.append("~ ~ ~")
     else:
         phrases = sentence_to_phrases(line, words=words)
         #print(phrases, "The phrases are")
         for i in range(0, len(phrases), 1):
 
             if i == 0:
-                pre.append("^")
+                pre.append("^ ^ ^")
             else:
                 pre.append(phrases[i-1])
 
             current.append(phrases[i])
 
             if i == len(phrases)-1:
-                post.append("~")
+                post.append("~ ~ ~")
                 break
             else:
                 post.append(phrases[i+1])
@@ -91,16 +91,17 @@ def main(checkpoint_path, hparams, reference_mel, dataset, name ):
         post_text = torch.LongTensor(text_to_sequence(point[2], hparams.text_cleaners)).cuda().unsqueeze(0)
         reference = torch.from_numpy(np.load(reference_mel)).cuda().unsqueeze(0)
         with torch.no_grad():
-            print("predicting")
+            #print("predicting")
             outs = model.inference(input_text, pre_text, post_text, style_input = reference)
             mel = outs[0]
-            output.append(mel.detach().cpu().numpy())
+            print(mel.shape)
+            output.append(mel.detach().cpu().squeeze(0).numpy())
     if len(output)==1:
         output_mel = output[0]
     else:
-        output_mel = np.concatenate(output, axis = 1)
+        output_mel = np.concatenate(output, axis = 1) 
 
-    np.save(f"PPSpeech_{iteration}_{name}.npy", output_mel)    #output_mel: [1, 80, T]
+    np.save(f"PPSpeech_{iteration}_{name}.npy", output_mel)    #output_mel: [80, T]
     print(f"Mel generated with name PPSpeech_{iteration}_{name}.npy ")
 
     return
